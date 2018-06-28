@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/ofpau/mog-map/issues"
   },
-  "homepage": "https://github.com/ofpau/mog-map#readme"
+  "homepage": "https://github.com/ofpau/mog-map#readme",
+  "dependencies": {
+    "socket.io": "^2.1.1"
+  }
 }
