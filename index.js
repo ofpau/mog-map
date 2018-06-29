@@ -64,6 +64,14 @@ function logics() {
 
 logics();
 
+function ffor00 () {
+    return Math.round(Math.random()) ? 'ff' : '00'
+}
+
+function getRandomNeonColor () {
+    return `#${ffor00()}${ffor00()}${ffor00()}`
+}
+
 io.on('connection', (socket) => {
     console.log(`new connection`)
 
@@ -75,10 +83,9 @@ io.on('connection', (socket) => {
         keyboard: {},
         score: 0,
         dead: false,
-        color: '#f25d3c'
+        color: getRandomNeonColor() //'#f25d3c'
     }
     
-    console.log(sector.length, sector[0].length);
     socket.emit('sector', sector);
     
     state.players.push(player);

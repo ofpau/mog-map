@@ -68,7 +68,7 @@ class Player extends WorldObject {
         this.color = '#f25d3c';
         this.w = tileW-4;
         this.h = tileH-4;
-
+        this.color = _player.color;
     }
 }
 
@@ -94,10 +94,7 @@ function render() {
     ctx.fillStyle = '#EEEEFF'
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    function paintTile(x, y, color) {
-        ctx.fillStyle = color;
-        ctx.fillRect(marginLeft + x*tileW, marginTop + y*tileH, tileW, tileH);
-    }
+    ctx.globalAlpha = 0.8;
 
     // Render the map
     for (let i = 0; i < sectorH; i++) {
@@ -106,9 +103,16 @@ function render() {
             sector[i][j].paint();              
         }
     }
+    
+    ctx.globalAlpha = 1;
 
     // Render player
     if (myPlayer) myPlayer.paint();
+
+    // Render the other players
+    players.forEach((p) => {
+        (new Player(p)).paint();
+    });
 
     // Add layer to soften colors
     ctx.fillStyle = 'rgb(255,255,255,0.1)'
