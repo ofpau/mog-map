@@ -15,28 +15,21 @@ function choice(v) {
     return v[Math.floor(Math.random()*v.length)];
 }
 
-// Map info
-const worldW = 31;
-const worldH = 25;
-const tileW = 34;
-const tileH = 34;
-
-const marginLeft = (canvas.width - worldW*tileW)/2;
-const marginTop = (canvas.height - worldH*tileH)/2;
-
 class WorldObject {
     constructor (x, y) {
         this.x = x;
         this.y = y;
+        this.w = tileW;
+        this.h = tileH;
     }
 
     paint() {
         ctx.fillStyle = this.color;
         ctx.fillRect(
-            marginLeft + this.x*tileW, 
-            marginTop + this.y*tileH, 
-            tileW, 
-            tileH
+            marginLeft + this.x*tileW + (tileW - this.w)/2, 
+            marginTop + this.y*tileH + (tileH - this.h)/2, 
+            this.w, 
+            this.h
         );   
     }
 }
@@ -70,30 +63,33 @@ class Rock extends WorldObject {
 }
 
 class Player extends WorldObject {
-    constructor (x, y) {
-        super(x, y);
+    constructor (_player) {
+        super(_player.x, _player.y);
         this.color = '#f25d3c';
+        this.w = tileW-4;
+        this.h = tileH-4;
+
     }
 }
 
-// List of things used to populate the map
-const mapStuff = [Grass, Water, Mud, Rock];
+//player = new Player(Math.floor(worldW / 2), Math.floor(worldH / 2));
+let state = {};
+let sector = []; //[new Rock(0, 0)];
+let myPlayer = undefined;
+let sectorH = 0;
+let sectorW = 0;
 
-// Populate the map to create the world
-const world = [[]];
-for (let i = 0; i < worldH; ++i) {
-    world.push([]);
-    for (let j = 0; j < worldW; ++j) {
-        let tileClass = choice(mapStuff);
-        world[i][j] = new tileClass(j, i);
-    }
-}
-
-player = new Player(Math.floor(worldW / 2), Math.floor(worldH / 2));
+const tileW = 34;
+const tileH = 34;
+const marginLeft = 60; //(canvas.width - sectorW*tileW)/2;
+const marginTop = 60; //(canvas.height - sectorH*tileH)/2;
 
 // Render
 function render() {
     requestAnimationFrame(render);
+
+    const { players } = state;
+
     // Clear screen
     ctx.fillStyle = '#EEEEFF'
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -104,23 +100,19 @@ function render() {
     }
 
     // Render the map
-    for (let i = 0; i < worldH; ++i) {
-        for (let j = 0; j < worldW; ++j) {
-            world[i][j].paint();              
+    for (let i = 0; i < sectorH; i++) {
+        for (let j = 0; j < sectorW; j++) {
+          //  console.log(i,j, sector[i][j])
+            sector[i][j].paint();              
         }
     }
 
     // Render player
-    player.paint();
+    if (myPlayer) myPlayer.paint();
 
     // Add layer to soften colors
     ctx.fillStyle = 'rgb(255,255,255,0.1)'
     // ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    if (keyboard.left) player.x--;
-    if (keyboard.right) player.x++;
-    if (keyboard.up) player.y--;
-    if (keyboard.down) player.y++;
 }
 
 requestAnimationFrame(render);
@@ -135,9 +127,51 @@ const mapping = {
 
 document.addEventListener('keydown', function (event) {
     keyboard[mapping[event.key]] = true
-    //socket.emit('input', keyboard)
+    socket.emit('input', keyboard)
 });
+
 document.addEventListener('keyup', function (event) {
     keyboard[mapping[event.key]] = false
-    //socket.emit('input', keyboard)
+    socket.emit('input', keyboard)
+});
+
+const socket = io();
+
+const typeToClass = {
+    'grass': Grass,
+    'water': Water,
+    'mud': Mud,
+    'rock': Rock
+}
+
+function toDrawableSector(server_sector) {
+   const s = [];
+    for (let i = 0; i < server_sector.length; ++i) {
+        s.push([]);
+        for (let j = 0; j < server_sector[i].length; ++j) {
+            const p = server_sector[i][j];
+            const tileClass = typeToClass[p.type];
+            s[i][j] = new tileClass(p.x, p.y);
+        }
+    }
+    return s;
+}
+
+socket.on('sector', (_sector) => {
+    sector = toDrawableSector(_sector);
+    sectorH = sector.length;
+    sectorW = sector[0].length;
+
+    //console.log(sector);
+});
+
+socket.on('state', function (newState) {
+    state = newState;
+
+    const p = state.players.find(player => {
+        return (player.id === socket.id);
+    });
+
+    myPlayer = new Player(p)
+    //console.log(state, myPlayer);
 });
