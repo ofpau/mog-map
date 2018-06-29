@@ -48,8 +48,17 @@ for (let i = 0; i < SECTOR_HEIGHT; ++i) {
     }
 }
 
-function switchSector(targetSectorSocket, targetSector) {
-    console.log(`I should send this player to sector ${targetSector}`)
+function switchSector(player, targetSectorSocket, targetSector) {
+    console.log(`I should send this player to sector ${targetSector}`);
+   //console.log(targetSectorSocket);
+
+    // Send msg to switch server
+    const s = playerSockets[player];
+    s.emit('switchServer', targetSector);
+
+    // Remove player from this sector's state
+    const { players } = state;
+    //players.splice(players.indexOf(player), 1);
 }
 
 function logics() {
@@ -71,13 +80,13 @@ function logics() {
             if (SECTOR === NUM_SECTORS-1) {
                 player.x--;
             }
-            else switchSector(rightSectorSocket, SECTOR+1);
+            else switchSector(player, rightSectorSocket, SECTOR+1);
         }
         if (player.x < 0) {
             if (SECTOR === 0) {
                 player.x++;
             }
-            else switchSector(leftSectorSocket, SECTOR-1);
+            else switchSector(player, leftSectorSocket, SECTOR-1);
         }
     });
 
@@ -96,6 +105,7 @@ function getRandomNeonColor () {
 
 console.log(`I'M SECTOR ${SECTOR}`);
 
+const playerSockets = {}
 io.on('connection', (socket) => {
     console.log(`new connection`)
 
@@ -109,6 +119,8 @@ io.on('connection', (socket) => {
         dead: false,
         color: getRandomNeonColor() //'#f25d3c'
     }
+
+    playerSockets[player] = socket;
     
     socket.emit('sector', sector);
     

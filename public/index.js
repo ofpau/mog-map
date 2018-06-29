@@ -180,3 +180,7 @@ socket.on('state', function (newState) {
     myPlayer = new Player(p)
     //console.log(state, myPlayer);
 });
+
+socket.on('switchServer', (targetSector) => {
+    console.log(`I should switch to sector ${targetSector}`);
+})
