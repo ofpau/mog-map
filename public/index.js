@@ -94,7 +94,7 @@ function render() {
     ctx.fillStyle = '#EEEEFF'
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = 0.7;
 
     // Render the map
     for (let i = 0; i < sectorH; i++) {
@@ -110,10 +110,11 @@ function render() {
     if (myPlayer) myPlayer.paint();
 
     // Render the other players
-    players.forEach((p) => {
-        (new Player(p)).paint();
-    });
-
+    if (players) {
+        players.forEach((p) => {
+            (new Player(p)).paint();
+        });
+    }
     // Add layer to soften colors
     ctx.fillStyle = 'rgb(255,255,255,0.1)'
     // ctx.fillRect(0, 0, canvas.width, canvas.height);

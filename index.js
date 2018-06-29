@@ -4,7 +4,8 @@ var app = express();
 var path = require('path');
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
-var port = process.env.PORT || 3000;
+const SECTOR = Number(process.env.SECTOR);
+var port = process.env.PORT || (3000 + SECTOR);
 
 server.listen(port, () => {
     console.log('Server listening at port %d', port);
@@ -20,12 +21,16 @@ const state = {
 }
 
 // Map info
+const NUM_SECTORS=4;
 const SECTOR_WIDTH  = 31;
 const SECTOR_HEIGHT = 25;
 
 function choice(v) {
     return v[Math.floor(Math.random()*v.length)];
 }
+
+const leftSectorSocket = SECTOR > 0? require('socket.io-client')(`http://localhost:${port-1}`): undefined;
+const rightSectorSocket = SECTOR < NUM_SECTORS-1? require('socket.io-client')(`http://localhost:${port+1}`): undefined;
 
 // List of things used to populate the map
 const tileTypes = ['grass', 'water', 'mud', 'rock'];
@@ -43,6 +48,10 @@ for (let i = 0; i < SECTOR_HEIGHT; ++i) {
     }
 }
 
+function switchSector(targetSectorSocket, targetSector) {
+    console.log(`I should send this player to sector ${targetSector}`)
+}
+
 function logics() {
     setTimeout(logics, 16);
 
@@ -55,14 +64,27 @@ function logics() {
         const { keyboard } = player;
         if (keyboard.left) player.x--;
         if (keyboard.right) player.x++;
-        if (keyboard.up) player.y--;
-        if (keyboard.down) player.y++;
+        if (keyboard.up && player.y > 0) player.y--;
+        if (keyboard.down && player.y < SECTOR_HEIGHT-1) player.y++;
+
+        if (player.x > SECTOR_WIDTH) {
+            if (SECTOR === NUM_SECTORS-1) {
+                player.x--;
+            }
+            else switchSector(rightSectorSocket, SECTOR+1);
+        }
+        if (player.x < 0) {
+            if (SECTOR === 0) {
+                player.x++;
+            }
+            else switchSector(leftSectorSocket, SECTOR-1);
+        }
     });
 
     io.sockets.emit('state', state);
+    if (leftSectorSocket) leftSectorSocket.emit('state', state);
+    if (rightSectorSocket) rightSectorSocket.emit('state', state);
 }
-
-logics();
 
 function ffor00 () {
     return Math.round(Math.random()) ? 'ff' : '00'
@@ -71,6 +93,8 @@ function ffor00 () {
 function getRandomNeonColor () {
     return `#${ffor00()}${ffor00()}${ffor00()}`
 }
+
+console.log(`I'M SECTOR ${SECTOR}`);
 
 io.on('connection', (socket) => {
     console.log(`new connection`)
@@ -99,3 +123,25 @@ io.on('connection', (socket) => {
         players.splice(players.indexOf(player), 1);
     })
 });
+
+if (leftSectorSocket) {
+    leftSectorSocket.on('connection', (socket) => {
+        console.log(`Connected to Sector ${SECTOR-1}`)
+    });    
+}
+if (rightSectorSocket) {
+    rightSectorSocket.on('connection', (socket) => {
+        console.log(`Connected to Sector ${SECTOR+1}`)
+    });
+}
+
+logics();
+
+// En canviar de sector:
+//    el server li passa l'autoritat sobre 
+//          aquest player al sector corresponent.
+//    elient es desconnecta d'aquest i es connecta al que toca
+
+// En un inici compartir tot l'state amb els servers adjacents
+// La versió bona és compartir només algunes caselles, 
+//    les més properes a les edges.
