@@ -4,7 +4,7 @@ var app = express();
 var path = require('path');
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
-const SECTOR = Number(process.env.SECTOR);
+const SECTOR = Number(process.env.SECTOR) || 0;
 var port = process.env.PORT || (3000 + SECTOR);
 
 server.listen(port, () => {

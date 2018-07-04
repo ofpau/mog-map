@@ -140,7 +140,7 @@ document.addEventListener('keyup', function (event) {
     socket.emit('input', keyboard)
 });
 
-const socket = io();
+let socket = io();
 
 const typeToClass = {
     'grass': Grass,
@@ -162,25 +162,37 @@ function toDrawableSector(server_sector) {
     return s;
 }
 
-socket.on('sector', (_sector) => {
-    sector = toDrawableSector(_sector);
-    sectorH = sector.length;
-    sectorW = sector[0].length;
-
-    //console.log(sector);
-});
-
-socket.on('state', function (newState) {
-    state = newState;
-
-    const p = state.players.find(player => {
-        return (player.id === socket.id);
+function setSocketListeners() {
+    socket.on('sector', (_sector) => {
+        sector = toDrawableSector(_sector);
+        sectorH = sector.length;
+        sectorW = sector[0].length;
+    
+        //console.log(sector);
     });
 
-    myPlayer = new Player(p)
-    //console.log(state, myPlayer);
-});
 
-socket.on('switchServer', (targetSector) => {
-    console.log(`I should switch to sector ${targetSector}`);
-})
+    socket.on('state', function (newState) {
+        state = newState;
+
+        const p = state.players.find(player => {
+            return (player.id === socket.id);
+        });
+
+        myPlayer = new Player(p)
+        //console.log(state, myPlayer);
+    });
+
+    socket.on('switchServer', (targetSector) => {
+        console.log(`I should switch to sector ${targetSector}`);
+        socket.close();
+        socket = io('http://localhost:300' + targetSector, { forceNew: true });
+        setSocketListeners();
+        console.log('Switched server.')
+    });
+
+}
+
+setSocketListeners();
+
+
