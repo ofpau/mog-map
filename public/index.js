@@ -88,6 +88,7 @@ class Player extends WorldObject {
 
 //player = new Player(Math.floor(worldW / 2), Math.floor(worldH / 2));
 let state = {};
+let currentSectorNum = 0;
 let sector = []; //[new Rock(0, 0)];
 let myPlayer = undefined;
 let sectorH = 0;
@@ -138,7 +139,7 @@ function render() {
     ctx.globalAlpha = 1;
 
     // Render player
-    if (myPlayer) myPlayer.paint();
+    //if (myPlayer) myPlayer.paint();
 
     // Render the other players
     if (players) {
@@ -181,6 +182,7 @@ const typeToClass = {
 }
 
 function toDrawableSector(sectorNum, server_sector) {
+    currentSectorNum = sectorNum;
     console.log(sectorNum);
     const s = [];
     console.log(server_sector.length, server_sector[0].length, server_sector[0][1]);
@@ -214,7 +216,7 @@ function setSocketListeners() {
         const p = state.players.find(player => {
             return (player.id === socket.id);
         });
-
+        p.x += currentSectorNum*10;
         myPlayer = new Player(p)
         //console.log(state, myPlayer);
     });
