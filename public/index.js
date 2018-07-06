@@ -32,7 +32,7 @@ class WorldObject {
     paint() {
         ctx.fillStyle = this.color;
         ctx.fillRect(
-            marginLeft + this.x*tileW*this.sector + (tileW - this.w)/2, 
+            marginLeft + this.x*tileW + (tileW - this.w)/2, 
             marginTop + this.y*tileH + (tileH - this.h)/2, 
             this.w, 
             this.h
@@ -71,7 +71,7 @@ class Rock extends WorldObject {
 class UnkownMaterial extends WorldObject {
     constructor (x, y, s) {
         super(x, y, s);
-        this.color = '#33af47';//'#cdc1c5';
+        this.color = '#cdc1c5';
     }
 }
 
@@ -97,12 +97,16 @@ const worldH = 25;
 
 const world = [];
 
-for (let i = 0; i < worldW; ++i) {
-    world[i]= [];
-    for (let j = 0; j < worldH; ++j) {
-        world[i][j] = new UnkownMaterial(i, j, 0);
+function initializeUnknownWorld() {
+    for (let i = 0; i < worldW; ++i) {
+        world[i]= [];
+        for (let j = 0; j < worldH; ++j) {
+            world[i][j] = new UnkownMaterial(i, j, 0);
+        }
     }
 }
+
+initializeUnknownWorld();
 
 // Render
 function render() {
@@ -127,7 +131,7 @@ function render() {
     for (let i = 0; i < sectorH; i++) {
         for (let j = 0; j < sectorW; j++) {
           //  console.log(i,j, sector[i][j])
-            sector[i][j].paint();              
+           //sector[i][j].paint();              
         }
     }
     
@@ -177,13 +181,17 @@ const typeToClass = {
 }
 
 function toDrawableSector(sectorNum, server_sector) {
-   const s = [];
+    console.log(sectorNum);
+    const s = [];
+    console.log(server_sector.length, server_sector[0].length, server_sector[0][1]);
     for (let i = 0; i < server_sector.length; ++i) {
         s.push([]);
         for (let j = 0; j < server_sector[i].length; ++j) {
             const p = server_sector[i][j];
             const tileClass = typeToClass[p.type];
-            s[i][j] = new tileClass(p.x, p.y, sectorNum);
+            let t = new tileClass(p.x + sectorNum*10, p.y, sectorNum);
+            s[i][j] = t;
+            world[sectorNum*server_sector[0].length+j][i] = t;
         }
     }
     return s;
@@ -191,6 +199,7 @@ function toDrawableSector(sectorNum, server_sector) {
 
 function setSocketListeners() {
     socket.on('sector', (sectorNum, _sector) => {
+        initializeUnknownWorld();
         sector = toDrawableSector(sectorNum, _sector);
         sectorH = sector.length;
         sectorW = sector[0].length;
