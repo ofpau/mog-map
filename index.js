@@ -36,8 +36,25 @@ function choice(v) {
     return v[Math.floor(Math.random()*v.length)];
 }
 
-const leftSectorSocket = SECTOR > 0? require('socket.io-client')(`http://localhost:${port-1}`): undefined;
-const rightSectorSocket = SECTOR < NUM_SECTORS-1? require('socket.io-client')(`http://localhost:${port+1}`): undefined;
+let leftSectorSocket = undefined; //SECTOR > 0? require('socket.io-client')(`http://localhost:${port-1}/servers`): undefined;
+let rightSectorSocket = SECTOR < NUM_SECTORS-1? require('socket.io-client')(`http://localhost:${port+1}/servers`): undefined;
+
+sio.on('connection', (socket) => {
+    console.log(`left server connected`);
+    leftSectorSocket = socket;
+
+    leftSectorSocket.on('heyo', (fn) => {
+        console.log('received new user from my left');
+        // send ack
+        fn();
+    });
+});
+
+if (rightSectorSocket) rightSectorSocket.on('heyo', (fn) => {
+    console.log('received new user from my right');
+    // ack
+    fn();
+});
 
 // List of things used to populate the map
 const tileTypes = ['grass', 'water', 'mud', 'rock'];
@@ -55,17 +72,23 @@ for (let i = 0; i < SECTOR_HEIGHT; ++i) {
     }
 }
 
+function tellClientToSwitch(player, targetSector) {
+    const s = playerSockets[player];
+    s.emit('switchServer', targetSector);
+}
+
 function switchSector(player, targetSectorSocket, targetSector) {
     console.log(`I should send this player to sector ${targetSector}`);
    //console.log(targetSectorSocket);
 
-   // Tell target sector to get this user 
-   
+   // Tell target sector to take control of this user 
+   targetSectorSocket.emit('heyo', () => {
+        // After the other server is waiting for user,
+        // tell client to switch server
+        tellClientToSwitch(player, targetSector);
+    });
 
-   // Tell client to switch server
-    const s = playerSockets[player];
-    s.emit('switchServer', targetSector);
-
+    
     // Remove player from this sector's state
     const { players } = state;
     //players.splice(players.indexOf(player), 1);
