@@ -28,8 +28,8 @@ const state = {
 }
 
 // Map info
-const NUM_SECTORS=4;
-const SECTOR_WIDTH  = 31;
+const NUM_SECTORS = 4;
+const SECTOR_WIDTH  = 10;
 const SECTOR_HEIGHT = 25;
 
 function choice(v) {
@@ -155,7 +155,7 @@ gio.on('connection', (socket) => {
 
     playerSockets[player] = socket;
     
-    socket.emit('sector', sector);
+    socket.emit('sector', SECTOR, sector);
     
     state.players.push(player);
     

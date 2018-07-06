@@ -11,22 +11,28 @@ canvas.width = window.innerWidth;
 
 const ctx = canvas.getContext('2d');
 
+const tileW = 34;
+const tileH = 34;
+const marginLeft = 60; //(canvas.width - sectorW*tileW)/2;
+const marginTop = 60; //(canvas.height - sectorH*tileH)/2;
+
 function choice(v) {
     return v[Math.floor(Math.random()*v.length)];
 }
 
 class WorldObject {
-    constructor (x, y) {
+    constructor (x, y, s) {
         this.x = x;
         this.y = y;
         this.w = tileW;
         this.h = tileH;
+        this.sector = s;
     }
 
     paint() {
         ctx.fillStyle = this.color;
         ctx.fillRect(
-            marginLeft + this.x*tileW + (tileW - this.w)/2, 
+            marginLeft + this.x*tileW*this.sector + (tileW - this.w)/2, 
             marginTop + this.y*tileH + (tileH - this.h)/2, 
             this.w, 
             this.h
@@ -35,30 +41,37 @@ class WorldObject {
 }
 
 class Grass extends WorldObject {
-    constructor (x, y) {
-        super(x, y);
+    constructor (x, y, s) {
+        super(x, y, s);
         this.color = '#33af47';
     }
 }
 
 class Water extends WorldObject {
-    constructor (x, y) {
-        super(x, y);
+    constructor (x, y, s) {
+        super(x, y, s);
         this.color = '#3199e2';
     }
 }
 
 class Mud extends WorldObject {
-    constructor (x, y) {
-        super(x, y);
+    constructor (x, y, s) {
+        super(x, y, s);
         this.color = '#7c5f40';
     }
 }
 
 class Rock extends WorldObject {
-    constructor (x, y) {
-        super(x, y);
+    constructor (x, y, s) {
+        super(x, y, s);
         this.color = '#d2dadd';
+    }
+}
+
+class UnkownMaterial extends WorldObject {
+    constructor (x, y, s) {
+        super(x, y, s);
+        this.color = '#33af47';//'#cdc1c5';
     }
 }
 
@@ -69,6 +82,7 @@ class Player extends WorldObject {
         this.w = tileW-4;
         this.h = tileH-4;
         this.color = _player.color;
+        this.sector = 0;
     }
 }
 
@@ -78,11 +92,17 @@ let sector = []; //[new Rock(0, 0)];
 let myPlayer = undefined;
 let sectorH = 0;
 let sectorW = 0;
+const worldW = 40;
+const worldH = 25;
 
-const tileW = 34;
-const tileH = 34;
-const marginLeft = 60; //(canvas.width - sectorW*tileW)/2;
-const marginTop = 60; //(canvas.height - sectorH*tileH)/2;
+const world = [];
+
+for (let i = 0; i < worldW; ++i) {
+    world[i]= [];
+    for (let j = 0; j < worldH; ++j) {
+        world[i][j] = new UnkownMaterial(i, j, 0);
+    }
+}
 
 // Render
 function render() {
@@ -96,6 +116,13 @@ function render() {
 
     ctx.globalAlpha = 0.7;
 
+    for (let i = 0; i < worldW; ++i) {
+        for (let j = 0; j < worldH; ++j) {
+          // console.log(world[i][j])
+            world[i][j].paint();
+        }
+    }
+    
     // Render the map
     for (let i = 0; i < sectorH; i++) {
         for (let j = 0; j < sectorW; j++) {
@@ -149,22 +176,22 @@ const typeToClass = {
     'rock': Rock
 }
 
-function toDrawableSector(server_sector) {
+function toDrawableSector(sectorNum, server_sector) {
    const s = [];
     for (let i = 0; i < server_sector.length; ++i) {
         s.push([]);
         for (let j = 0; j < server_sector[i].length; ++j) {
             const p = server_sector[i][j];
             const tileClass = typeToClass[p.type];
-            s[i][j] = new tileClass(p.x, p.y);
+            s[i][j] = new tileClass(p.x, p.y, sectorNum);
         }
     }
     return s;
 }
 
 function setSocketListeners() {
-    socket.on('sector', (_sector) => {
-        sector = toDrawableSector(_sector);
+    socket.on('sector', (sectorNum, _sector) => {
+        sector = toDrawableSector(sectorNum, _sector);
         sectorH = sector.length;
         sectorW = sector[0].length;
     
