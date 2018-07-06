@@ -140,7 +140,7 @@ document.addEventListener('keyup', function (event) {
     socket.emit('input', keyboard)
 });
 
-let socket = io();
+let socket = io('/game');
 
 const typeToClass = {
     'grass': Grass,
@@ -186,7 +186,7 @@ function setSocketListeners() {
     socket.on('switchServer', (targetSector) => {
         console.log(`I should switch to sector ${targetSector}`);
         socket.close();
-        socket = io('http://localhost:300' + targetSector, { forceNew: true });
+        socket = io('http://localhost:300' + targetSector + '/game', { forceNew: true });
         setSocketListeners();
         console.log('Switched server.')
     });
@@ -194,5 +194,3 @@ function setSocketListeners() {
 }
 
 setSocketListeners();
-
-

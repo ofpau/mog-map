@@ -6,6 +6,13 @@ var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 const SECTOR = Number(process.env.SECTOR) || 0;
 var port = process.env.PORT || (3000 + SECTOR);
+//var socketServerRight = require('socket.io-client')('http://localhost:300' + (SECTOR+1));
+
+// IO for the left sector(s)
+const sio = io.of('/servers');
+
+// IO for the game namespace
+const gio = io.of('/game');
 
 server.listen(port, () => {
     console.log('Server listening at port %d', port);
@@ -52,7 +59,10 @@ function switchSector(player, targetSectorSocket, targetSector) {
     console.log(`I should send this player to sector ${targetSector}`);
    //console.log(targetSectorSocket);
 
-    // Send msg to switch server
+   // Tell target sector to get this user 
+   
+
+   // Tell client to switch server
     const s = playerSockets[player];
     s.emit('switchServer', targetSector);
 
@@ -90,7 +100,7 @@ function logics() {
         }
     });
 
-    io.sockets.emit('state', state);
+    gio.emit('state', state);
     if (leftSectorSocket) leftSectorSocket.emit('state', state);
     if (rightSectorSocket) rightSectorSocket.emit('state', state);
 }
@@ -106,8 +116,8 @@ function getRandomNeonColor () {
 console.log(`I'M SECTOR ${SECTOR}`);
 
 const playerSockets = {}
-io.on('connection', (socket) => {
-    console.log(`new connection`)
+gio.on('connection', (socket) => {
+    console.log(`new player connection`)
 
     const player = {
         x: Math.floor(Math.random() * SECTOR_WIDTH),
