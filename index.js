@@ -45,6 +45,9 @@ sio.on('connection', (socket) => {
 
     leftSectorSocket.on('heyo', (fn) => {
         console.log('received new user from my left');
+        
+        // Add user to list of users pending to connect
+
         // send ack
         fn();
     });
@@ -52,6 +55,9 @@ sio.on('connection', (socket) => {
 
 if (rightSectorSocket) rightSectorSocket.on('heyo', (fn) => {
     console.log('received new user from my right');
+
+    // Add user to list of users pending to connect
+
     // ack
     fn();
 });
@@ -140,7 +146,15 @@ console.log(`I'M SECTOR ${SECTOR}`);
 
 const playerSockets = {}
 gio.on('connection', (socket) => {
-    console.log(`new player connection`)
+    console.log(`new player connection with id ${socket.id}`)
+    
+    socket.on('iam', (previousId) => {
+        // If user is new, generate player
+
+        // If it was a user pending of connection, get ownership
+        //  - Add to state with the props we received
+
+    });
 
     const player = {
         x: Math.floor(Math.random() * SECTOR_WIDTH),
@@ -190,3 +204,15 @@ logics();
 // En un inici compartir tot l'state amb els servers adjacents
 // La versió bona és compartir només algunes caselles, 
 //    les més properes a les edges.
+
+
+/*
+TODO:
+    - s2s: send player that will connect
+    - s2s: remove from state the player that left this sector
+    - s2s: add received player to set of pending players (or map id->player)
+    - c2s: store first id received and never update it
+    - c2s: send id right after connection
+    - s2c: create player only if no id received
+    - s2c: otherwise just add pending player to state
+*/

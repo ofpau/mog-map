@@ -200,6 +200,12 @@ function toDrawableSector(sectorNum, server_sector) {
 }
 
 function setSocketListeners() {
+    
+    socket.on('connect', () => {
+        let myId = 'placeholder';
+        socket.emit('iam', myId);
+    });
+
     socket.on('sector', (sectorNum, _sector) => {
         initializeUnknownWorld();
         sector = toDrawableSector(sectorNum, _sector);
