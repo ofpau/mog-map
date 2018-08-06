@@ -39,24 +39,34 @@ function choice(v) {
 let leftSectorSocket = undefined; //SECTOR > 0? require('socket.io-client')(`http://localhost:${port-1}/servers`): undefined;
 let rightSectorSocket = SECTOR < NUM_SECTORS-1? require('socket.io-client')(`http://localhost:${port+1}/servers`): undefined;
 
+const playersPendingConnection = new Map();
+
 sio.on('connection', (socket) => {
     console.log(`left server connected`);
     leftSectorSocket = socket;
 
-    leftSectorSocket.on('heyo', (fn) => {
-        console.log('received new user from my left');
+    leftSectorSocket.on('heyo', (incomingPlayer, fn) => {
+        console.log('received new user from my left:');
+        console.log(incomingPlayer);
+
+        incomingPlayer.x = 0;
         
         // Add user to list of users pending to connect
+        playersPendingConnection[incomingPlayer.id] = incomingPlayer;
 
         // send ack
         fn();
     });
 });
 
-if (rightSectorSocket) rightSectorSocket.on('heyo', (fn) => {
+if (rightSectorSocket) rightSectorSocket.on('heyo', (incomingPlayer, fn) => {
     console.log('received new user from my right');
+    console.log(incomingPlayer);
+
+    incomingPlayer.x = SECTOR_WIDTH-1;
 
     // Add user to list of users pending to connect
+    playersPendingConnection[incomingPlayer.id] = incomingPlayer;
 
     // ack
     fn();
@@ -88,7 +98,7 @@ function switchSector(player, targetSectorSocket, targetSector) {
    //console.log(targetSectorSocket);
 
    // Tell target sector to take control of this user 
-   targetSectorSocket.emit('heyo', () => {
+   targetSectorSocket.emit('heyo', player, () => {
         // After the other server is waiting for user,
         // tell client to switch server
         tellClientToSwitch(player, targetSector);
@@ -149,38 +159,59 @@ gio.on('connection', (socket) => {
     console.log(`new player connection with id ${socket.id}`)
     
     socket.on('iam', (previousId) => {
+        console.log('iam', previousId);
+        let player = {};
+
         // If user is new, generate player
+        if (playersPendingConnection[previousId]) {
+            // If it was a user coming from another server, get ownership
+            //  - Add to state with the props we received
+            console.log('pending player connected');
+            
+            player = playersPendingConnection[previousId];
+            
+            // remove player from playersPendingConnection
+            playersPendingConnection.delete(previousId);
 
-        // If it was a user pending of connection, get ownership
-        //  - Add to state with the props we received
+            // adapt layer location to this sector
+            // If came from left
+            // player.x = 0
+            // If came from right
+            //player.x = SECTOR_WIDTH-1;
+        }
+        else {
+            // should be true: 
+            //assert (previousId === socket.id);
+            
+            socket.emit('youare', socket.id);
 
+            // new player
+            player = {
+                x: Math.floor(Math.random() * SECTOR_WIDTH),
+                y: Math.floor(Math.random() * SECTOR_HEIGHT),
+                size: 20,
+                id: socket.id,
+                keyboard: {},
+                score: 0,
+                dead: false,
+                color: getRandomNeonColor() //'#f25d3c'
+            }
+        }
+        playerSockets[player] = socket;
+
+        socket.emit('sector', SECTOR, sector);
+        
+        state.players.push(player);
+        
+        socket.on('input', (keyboard => {
+            player.keyboard = keyboard;
+        }));
+        
+        socket.on('disconnect', () => {
+            const { players } = state;
+            players.splice(players.indexOf(player), 1);
+        });
     });
-
-    const player = {
-        x: Math.floor(Math.random() * SECTOR_WIDTH),
-        y: Math.floor(Math.random() * SECTOR_HEIGHT),
-        size: 20,
-        id: socket.id,
-        keyboard: {},
-        score: 0,
-        dead: false,
-        color: getRandomNeonColor() //'#f25d3c'
-    }
-
-    playerSockets[player] = socket;
-    
-    socket.emit('sector', SECTOR, sector);
-    
-    state.players.push(player);
-    
-    socket.on('input', (keyboard => {
-        player.keyboard = keyboard;
-    }));
-    
-    socket.on('disconnect', () => {
-        const { players } = state;
-        players.splice(players.indexOf(player), 1);
-    })
 });
 
 if (leftSectorSocket) {
@@ -208,11 +239,14 @@ logics();
 
 /*
 TODO:
-    - s2s: send player that will connect
-    - s2s: remove from state the player that left this sector
-    - s2s: add received player to set of pending players (or map id->player)
-    - c2s: store first id received and never update it
-    - c2s: send id right after connection
-    - s2c: create player only if no id received
-    - s2c: otherwise just add pending player to state
+    o   c: paint all players with the correct offset (on the right sector)
+    o s2s: send player that will connect
+    o s2s: remove from state the player that left this sector
+            -> it's already done on disconnect. Maybe consider doing it earlier 
+    o s2s: add received player to set of pending players (or map id->player)
+    o c2s: store first id received and never update it
+    x c2s: send id right after connection -> no need, client has it
+    o s2c: create player only if no id received
+    o s2c: otherwise just add pending player to state
+    - s2c: add sector information for each player/element received
 */

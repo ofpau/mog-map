@@ -144,6 +144,7 @@ function render() {
     // Render the other players
     if (players) {
         players.forEach((p) => {
+            p.x += currentSectorNum*sectorW;
             (new Player(p)).paint();
         });
     }
@@ -199,11 +200,20 @@ function toDrawableSector(sectorNum, server_sector) {
     return s;
 }
 
+let myId = 'placeholder';
+const getMyId = () => myId;
+const setMyId = (_id) => myId = _id;
+
 function setSocketListeners() {
     
     socket.on('connect', () => {
-        let myId = 'placeholder';
         socket.emit('iam', myId);
+    });
+
+    socket.on('youare', (givenId) => {
+        setMyId(socket.id);
+        console.log(`Set my id to ${socket.id}`);
+        setMyId(givenId);
     });
 
     socket.on('sector', (sectorNum, _sector) => {
@@ -215,15 +225,18 @@ function setSocketListeners() {
         //console.log(sector);
     });
 
-
     socket.on('state', function (newState) {
         state = newState;
 
         const p = state.players.find(player => {
-            return (player.id === socket.id);
+            return (player.id === getMyId());
         });
-        p.x += currentSectorNum*10;
-        myPlayer = new Player(p)
+        if (p) {
+            p.x += currentSectorNum;//*sectorW;
+            myPlayer = new Player(p)
+        } else {
+            console.log('player not found')
+        }
         //console.log(state, myPlayer);
     });
 
