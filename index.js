@@ -38,6 +38,7 @@ function choice(v) {
 
 let leftSectorSocket = undefined; //SECTOR > 0? require('socket.io-client')(`http://localhost:${port-1}/servers`): undefined;
 let rightSectorSocket = SECTOR < NUM_SECTORS-1? require('socket.io-client')(`http://localhost:${port+1}/servers`): undefined;
+let rightSectorSocketAvailable = false;
 
 const playersPendingConnection = new Map();
 
@@ -59,19 +60,26 @@ sio.on('connection', (socket) => {
     });
 });
 
-if (rightSectorSocket) rightSectorSocket.on('heyo', (incomingPlayer, fn) => {
-    console.log('received new user from my right');
-    console.log(incomingPlayer);
+if (rightSectorSocket) {
+    rightSectorSocket.on('connect', () => {
+        rightSectorSocketAvailable = true;
+    });
+    rightSectorSocket.on('disconnect', () => {
+        rightSectorSocketAvailable = false;
+    });
+    rightSectorSocket.on('heyo', (incomingPlayer, fn) => {
+        console.log('received new user from my right');
+        console.log(incomingPlayer);
 
-    incomingPlayer.x = SECTOR_WIDTH-1;
+        incomingPlayer.x = SECTOR_WIDTH-1;
 
-    // Add user to list of users pending to connect
-    playersPendingConnection[incomingPlayer.id] = incomingPlayer;
+        // Add user to list of users pending to connect
+        playersPendingConnection[incomingPlayer.id] = incomingPlayer;
 
-    // ack
-    fn();
-});
-
+        // ack
+        fn();
+    });
+}
 // List of things used to populate the map
 const tileTypes = ['grass', 'water', 'mud', 'rock'];
 
@@ -126,7 +134,8 @@ function logics() {
         if (keyboard.down && player.y < SECTOR_HEIGHT-1) player.y++;
 
         if (player.x > SECTOR_WIDTH) {
-            if (SECTOR === NUM_SECTORS-1) {
+            let isRightMostSector = SECTOR === NUM_SECTORS-1 || !rightSectorSocketAvailable;
+            if (isRightMostSector) {
                 player.x--;
             }
             else switchSector(player, rightSectorSocket, SECTOR+1);
@@ -249,4 +258,5 @@ TODO:
     o s2c: create player only if no id received
     o s2c: otherwise just add pending player to state
     - s2c: add sector information for each player/element received
+    -   s: control attempts to go to right sectors that are unavailable
 */
